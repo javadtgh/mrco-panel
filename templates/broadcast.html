@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Broadcast - X-UI Panel{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="greeting">Broadcast Message</h1>
+    <p class="greeting-sub">Send a message to all users</p>
+</div>
+
+<div class="card">
+    <form method="POST">
+        <div class="mb-3">
+            <label for="message" class="form-label">Message</label>
+            <textarea class="form-control" id="message" name="message" rows="6" required></textarea>
+            <small class="text-secondary">You can use Markdown formatting.</small>
+        </div>
+        <button type="submit" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            Send Message
+        </button>
+    </form>
+</div>
+
+{% if history %}
+<div class="card mt-4">
+    <h4 class="card-title">Message History</h4>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Message</th>
+                    <th>Sent</th>
+                    <th>Failed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for msg in history %}
+                <tr>
+                    <td>{{ msg.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ msg.message[:50] }}...</td>
+                    <td>{{ msg.sent_count }}</td>
+                    <td>{{ msg.failed_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

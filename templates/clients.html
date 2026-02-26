@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Clients - X-UI Panel{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+        <h1 class="greeting">Clients</h1>
+        <p class="greeting-sub">Manage all X-UI clients</p>
+    </div>
+    <div>
+        {% if current_user.role == 'super_admin' %}
+        <button class="btn btn-secondary me-2" onclick="cleanupDuplicateClients()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+                <path d="M3 6h18M9 12h6M10 3L8 21M14 3l2 18"/>
+            </svg>
+            Cleanup Duplicates
+        </button>
+        <button class="btn btn-secondary me-2" onclick="syncClients()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+            Sync Clients
+        </button>
+        {% endif %}
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClientModal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Client
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group" style="display: flex; gap: 0.5rem;">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search clients..." value="{{ search }}">
+                <button class="btn btn-secondary" onclick="searchClients()">Search</button>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-control" id="sortSelect" onchange="sortClients()">
+                <option value="email" {% if sort_by == 'email' %}selected{% endif %}>Sort by Name</option>
+                <option value="used_gb" {% if sort_by == 'used_gb' %}selected{% endif %}>Sort by Traffic Used</option>
+                <option value="remaining_days" {% if sort_by == 'remaining_days' %}selected{% endif %}>Sort by Expiry</option>
+                <option value="is_online" {% if sort_by == 'is_online' %}selected{% endif %}>Sort by Online Status</option>
+                <option value="enable" {% if sort_by == 'enable' %}selected{% endif %}>Sort by Status</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-control" id="orderSelect" onchange="sortClients()">
+                <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
+                <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Clients Table -->
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Actions</th>
+                    <th>Status</th>
+                    <th>Traffic (Used/Total)</th>
+                    <th>Expiry</th>
+                    <th>Panels</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for client in clients %}
+                <tr>
+                    <td><strong>{{ client.email }}</strong></td>
+                    <td>
+                        <div class="d-flex" style="gap: 4px; flex-wrap: wrap;">
+                            <button class="btn btn-sm {% if client.enable %}btn-success{% else %}btn-secondary{% endif %}"
+                                    data-uuid="{{ client.uuid }}"
+                                    onclick="toggleClient(this)"
+                                    style="padding: 0.25rem 0.5rem;">
+                                {% if client.enable %}Disable{% else %}Enable{% endif %}
+                            </button>
+                            <button class="btn btn-secondary btn-sm" data-uuid="{{ client.uuid }}" onclick="editClient(this)" style="padding: 0.25rem 0.5rem;">Edit</button>
+                            <button class="btn btn-secondary btn-sm" data-uuid="{{ client.uuid }}" onclick="deleteClient(this)" style="padding: 0.25rem 0.5rem;">Delete</button>
+                            <button class="btn btn-secondary btn-sm" data-uuid="{{ client.uuid }}" onclick="resetTraffic(this)" style="padding: 0.25rem 0.5rem;">Reset</button>
+                            <button class="btn btn-secondary btn-sm" data-uuid="{{ client.uuid }}" onclick="showSublink(this)" style="padding: 0.25rem 0.5rem;">Sublink</button>
+                        </div>
+                    </td>
+                    <td>
+                        {% if client.enable %}
+                            {% if client.is_online %}
+                                <span class="status-dot online" title="Online"></span>
+                            {% else %}
+                                <span class="status-dot offline" title="Offline"></span>
+                            {% endif %}
+                        {% else %}
+                            <span class="status-dot disabled" title="Disabled"></span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>{{ "%.2f"|format(client.used_gb) }} GB</span>
+                            <span class="text-secondary">/ {{ "%.2f"|format(client.total_gb) }} GB</span>
+                        </div>
+                        <div class="progress-bar" style="width:100%; background: var(--border-color);">
+                            <div class="progress-fill accent" style="width: {{ client.percent }}%"></div>
+                        </div>
+                        <small class="text-secondary mt-1 d-block">{{ "%.1f"|format(client.percent) }}% used</small>
+                    </td>
+                    <td>
+                        {% if client.expiry_time > 0 %}
+                            {% if client.remaining_days > 0 %}
+                                <span class="text-success">{{ client.remaining_days }} days</span>
+                            {% else %}
+                                <span class="text-danger">Expired</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-info">Unlimited</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if client.panels_count == 1 %}
+                            <span class="badge badge-red">{{ client.panels_count }}</span>
+                        {% else %}
+                            <span class="badge badge-green">{{ client.panels_count }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <nav style="margin-top: 1.5rem; display: flex; justify-content: center;">
+        <ul class="pagination">
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('clients', page=page-1, search=search, sort_by=sort_by, sort_order=sort_order) }}">Previous</a>
+            </li>
+            {% endif %}
+            
+            {% for p in range(1, total_pages+1) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('clients', page=p, search=search, sort_by=sort_by, sort_order=sort_order) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            
+            {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('clients', page=page+1, search=search, sort_by=sort_by, sort_order=sort_order) }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+    <div class="text-center text-secondary mt-3">
+        Showing {{ (page-1)*per_page + 1 }} to {{ [page*per_page, total_clients]|min }} of {{ total_clients }} clients
+    </div>
+</div>
+
+<!-- Add Client Modal -->
+<div class="modal fade" id="addClientModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Client</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addClientForm">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Base Email</label>
+                            <input type="text" name="email" class="form-control" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Total Traffic (GB)</label>
+                            <input type="number" name="total_gb" class="form-control" min="0.1" step="0.1" value="10" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Validity Days</label>
+                            <input type="number" name="days" class="form-control" min="0" value="30">
+                            <small class="text-secondary">0 = unlimited</small>
+                        </div>
+                        {% if current_user.role == 'super_admin' %}
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Assign to Admin</label>
+                            <select name="admin_id" class="form-control">
+                                <option value="">Myself (Super Admin)</option>
+                                {% for admin in admins_list %}
+                                <option value="{{ admin.id }}">{{ admin.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addClient()">Create Client</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Client Modal -->
+<div class="modal fade" id="editClientModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Client</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editClientForm">
+                    <input type="hidden" id="editUuid">
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="text" id="editEmail" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Total Traffic (GB)</label>
+                        <input type="number" id="editTotalGB" class="form-control" min="0.1" step="0.1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New Validity Days</label>
+                        <input type="number" id="editDays" class="form-control" min="0" required>
+                        <small class="text-secondary">0 = unlimited</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sublink Modal -->
+<div class="modal fade" id="sublinkModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Subscription Link</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <input type="text" id="sublinkInput" class="form-control" readonly>
+                </div>
+                <div class="mb-3">
+                    <button class="btn btn-secondary" onclick="copySublink()">Copy</button>
+                    <a id="downloadLink" class="btn btn-secondary" download="sublink.txt">Download</a>
+                </div>
+                <div id="qrcodeContainer" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

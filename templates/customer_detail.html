@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Details{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="greeting">Customer Details</h1>
+    <p class="greeting-sub">{{ customer.first_name }} {{ customer.last_name }} (@{{ customer.username }})</p>
+</div>
+
+<div class="card">
+    <h4>Subscriptions & Payments</h4>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Package</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Approved</th>
+                    <th>Client Email</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td>{{ p.id }}</td>
+                    <td>{{ p.package_name }}</td>
+                    <td>{{ p.amount|int }}</td>
+                    <td>
+                        {% if p.status == 'approved' %}
+                            <span class="badge badge-green">Approved</span>
+                        {% elif p.status == 'pending' %}
+                            <span class="badge badge-orange">Pending</span>
+                        {% else %}
+                            <span class="badge badge-red">Rejected</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ p.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ p.approved_at.strftime('%Y-%m-%d %H:%M') if p.approved_at else '-' }}</td>
+                    <td>{{ p.client_email or '-' }}</td>
+                    <td>
+                        {% if p.client %}
+                            <div class="d-flex" style="gap: 4px; flex-wrap: wrap;">
+                                <button class="btn btn-sm {% if p.client.enable %}btn-success{% else %}btn-secondary{% endif %}"
+                                        data-uuid="{{ p.client.uuid }}"
+                                        onclick="toggleClient(this)"
+                                        style="padding: 0.25rem 0.5rem;">
+                                    {% if p.client.enable %}Disable{% else %}Enable{% endif %}
+                                </button>
+                                <button class="btn btn-secondary btn-sm" data-uuid="{{ p.client.uuid }}" onclick="editClient(this)" style="padding: 0.25rem 0.5rem;">Edit</button>
+                                <button class="btn btn-secondary btn-sm" data-uuid="{{ p.client.uuid }}" onclick="deleteClient(this)" style="padding: 0.25rem 0.5rem;">Delete Client</button>
+                                <button class="btn btn-secondary btn-sm" data-uuid="{{ p.client.uuid }}" onclick="resetTraffic(this)" style="padding: 0.25rem 0.5rem;">Reset</button>
+                            </div>
+                        {% else %}
+                            {% if p.status == 'approved' %}
+                                <span class="text-secondary">Client not found</span>
+                            {% endif %}
+                        {% endif %}
+                        <!-- دکمه حذف اشتراک برای همه وضعیت‌ها -->
+                        <button class="btn btn-danger btn-sm" onclick="deleteSubscription({{ p.id }})" style="padding: 0.25rem 0.5rem;">Delete Subscription</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+function deleteSubscription(paymentId) {
+    if (!confirm('⚠️ آیا از حذف این اشتراک اطمینان دارید؟ این عملیات برگشت‌ناپذیر است.')) return;
+    fetch(`/api/subscription/${paymentId}/delete`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ اشتراک با موفقیت حذف شد.');
+                location.reload();
+            } else {
+                alert('❌ خطا: ' + data.message);
+            }
+        })
+        .catch(() => alert('❌ خطا در ارتباط با سرور.'));
+}
+</script>
+{% endblock %}

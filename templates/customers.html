@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}My Customers{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="greeting">My Customers</h1>
+    <p class="greeting-sub">List of customers who purchased from you</p>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Telegram ID</th>
+                    <th>Username</th>
+                    <th>Name</th>
+                    <th>Joined</th>
+                    <th>Active Subscriptions</th>
+                    <th>Pending Payments</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cust in customers %}
+                <tr>
+                    <td>{{ cust.id }}</td>
+                    <td>{{ cust.telegram_id }}</td>
+                    <td>@{{ cust.username or '' }}</td>
+                    <td>{{ cust.first_name }} {{ cust.last_name }}</td>
+                    <td>{{ cust.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ cust.active_count }}</td>
+                    <td>{{ cust.pending_count }}</td>
+                    <td>
+                        <a href="{{ url_for('customer_detail', customer_id=cust.id) }}" class="btn btn-secondary btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

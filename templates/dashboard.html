@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - X-UI Panel{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <h1 class="greeting" id="greeting">Good morning, {{ user.username }}</h1>
+    <p class="greeting-sub">Here's what's happening with your servers today.</p>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Servers</div>
+        <div class="stat-value">{{ stats.total_servers }}</div>
+        <div class="stat-change positive">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                <polyline points="17 6 23 6 23 12"/>
+            </svg>
+            {{ stats.active_servers }} active
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Clients</div>
+        <div class="stat-value">{{ stats.total_clients }}</div>
+        <div class="stat-change positive">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                <polyline points="17 6 23 6 23 12"/>
+            </svg>
+            {{ stats.online_clients }} online
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Online Clients</div>
+        <div class="stat-value">{{ stats.online_clients }}</div>
+        <div class="stat-change positive">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                <polyline points="17 6 23 6 23 12"/>
+            </svg>
+            Currently online
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Traffic</div>
+        <div class="stat-value">{{ stats.total_traffic }} GB</div>
+        <div class="stat-change positive">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                <polyline points="17 6 23 6 23 12"/>
+            </svg>
+            All time
+        </div>
+    </div>
+</div>
+
+<!-- Two Column Layout -->
+<div class="two-col">
+    <!-- Online Users Card (با قابلیت اسکرول) -->
+    <div class="card" style="height: 400px; display: flex; flex-direction: column;">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Online Clients</h3>
+                <p class="card-subtitle">Currently active users</p>
+            </div>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding-right: 0.5rem;">
+            <div class="activity-feed">
+                {% if online_list_html %}
+                    {% for email in online_list_html.split('<br>') if email %}
+                    <div class="activity-item">
+                        <div class="activity-icon green">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                            </svg>
+                        </div>
+                        <div class="activity-content">
+                            <p class="activity-text"><strong>{{ email }}</strong></p>
+                            <span class="activity-time">Online now</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-secondary">No online clients</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Clients Near Limit Card -->
+    <div class="card" style="height: 400px; display: flex; flex-direction: column;">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">⚠️ Clients Near Limit</h3>
+                <p class="card-subtitle">Traffic or expiry close to limit</p>
+            </div>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding-right: 0.5rem;">
+            <div class="activity-feed">
+                {% for user in nearing_limit %}
+                <div class="activity-item">
+                    <div class="activity-icon {% if user.enable %}orange{% else %}red{% endif %}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 8v4M12 16h.01"/>
+                        </svg>
+                    </div>
+                    <div class="activity-content">
+                        <p class="activity-text"><strong>{{ user.email }}</strong></p>
+                        <span class="activity-time">
+                            {{ "%.2f"|format(user.remaining_gb) }} GB left · {{ user.remaining_days }} days left
+                        </span>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-secondary">No clients near limit</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">
+        <h3 class="card-title">Quick Actions</h3>
+    </div>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="{{ url_for('servers') }}" class="btn btn-secondary">Manage Servers</a>
+        <a href="{{ url_for('clients') }}" class="btn btn-secondary">Manage Clients</a>
+        <a href="{{ url_for('broadcast') }}" class="btn btn-secondary">Send Broadcast</a>
+    </div>
+</div>
+{% endblock %}

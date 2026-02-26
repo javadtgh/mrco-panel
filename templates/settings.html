@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - X-UI Panel{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="greeting">Settings</h1>
+    <p class="greeting-sub">Manage your account and preferences</p>
+</div>
+
+<div class="settings-grid">
+    <!-- Left Column: Account -->
+    <div>
+        <section class="settings-section">
+            <div class="card">
+                <h2 class="settings-title">Account Information</h2>
+                <p class="settings-desc">Update your personal information</p>
+                <form method="POST" action="{{ url_for('update_profile') }}">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-control" value="{{ user.username }}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Role</label>
+                        <input type="text" class="form-control" value="{% if user.role == 'super_admin' %}Super Admin{% else %}Admin{% endif %}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Telegram ID</label>
+                        <input type="text" name="telegram_id" class="form-control" value="{{ user.telegram_id or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Payment Card (for receiving money)</label>
+                        <input type="text" name="payment_card" class="form-control" value="{{ user.payment_card or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Your Referral Link</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" value="https://t.me/YourBot?start={{ user.id }}" readonly>
+                            <button class="btn btn-secondary" onclick="copyToClipboard(this)">Copy</button>
+                        </div>
+                        <small class="text-secondary">Share this link with customers</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                </form>
+                {% if current_user.role == 'super_admin' %}
+                <hr>
+                <h3 class="settings-title" style="font-size:1rem; margin-bottom:1rem;">Change Password</h3>
+                <form method="POST" action="{{ url_for('change_password') }}">
+                    <div class="form-group">
+                        <label class="form-label">Current Password</label>
+                        <input type="password" name="old_password" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" name="new_password" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm New Password</label>
+                        <input type="password" name="confirm_password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Password</button>
+                </form>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <!-- Right Column: Appearance & Notifications -->
+    <div>
+        <section class="settings-section">
+            <div class="card">
+                <h2 class="settings-title">Appearance</h2>
+                <p class="settings-desc">Customize how the dashboard looks</p>
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <div class="settings-row-label">Theme Mode</div>
+                        <div class="settings-row-desc">Snow (light) or Carbon (dark)</div>
+                    </div>
+                    <div class="theme-toggle">
+                        <button class="theme-btn theme-btn-snow active" onclick="setTheme('snow')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="5"/>
+                                <line x1="12" y1="1" x2="12" y2="3"/>
+                                <line x1="12" y1="21" x2="12" y2="23"/>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                                <line x1="1" y1="12" x2="3" y2="12"/>
+                                <line x1="21" y1="12" x2="23" y2="12"/>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                            </svg>
+                        </button>
+                        <button class="theme-btn theme-btn-carbon" onclick="setTheme('carbon')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <div class="settings-row-label">Language</div>
+                        <div class="settings-row-desc">Interface language</div>
+                    </div>
+                    <select class="form-control" style="width: auto;">
+                        <option value="en">English</option>
+                        <option value="fa">Persian</option>
+                    </select>
+                </div>
+                <div class="settings-row">
+                    <div class="settings-row-info">
+                        <div class="settings-row-label">Items per page</div>
+                        <div class="settings-row-desc">Number of items in tables</div>
+                    </div>
+                    <input type="number" class="form-control" style="width: 80px;" value="20" min="5" max="100">
+                </div>
+            </div>
+        </section>
+
+        <!-- Telegram Bot Settings (for all admins) -->
+        <section class="settings-section">
+            <div class="card">
+                <h2 class="settings-title">Your Telegram Bot</h2>
+                <p class="settings-desc">Configure your own bot. Changes require a restart of the panel to take effect.</p>
+                <form id="botSettingsForm">
+                    <div class="form-group">
+                        <label class="form-label">Bot Token (from BotFather)</label>
+                        <input type="text" id="bot_token" class="form-control" value="{{ user.bot_token or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bot Username (without @)</label>
+                        <input type="text" id="bot_username" class="form-control" value="{{ user.bot_username or '' }}">
+                    </div>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input" id="bot_enabled" {% if user.bot_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="bot_enabled">Enable this bot</label>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="saveBotSettings()">Save Bot Settings</button>
+                </form>
+            </div>
+        </section>
+        {% if current_user.role == 'super_admin' %}
+        <section class="settings-section">
+            <div class="card">
+                <h2 class="settings-title">Server Restart</h2>
+                <p class="settings-desc">Restart the panel service (requires sudo).</p>
+                <button class="btn btn-danger" onclick="restartPanel()">Restart Panel</button>
+                <p class="text-secondary mt-2">After clicking, the panel will restart and you will be logged out.</p>
+            </div>
+        </section>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Fetch current bot settings on page load
+fetch('/api/bot/token')
+    .then(res => res.json())
+    .then(data => {
+        if (data.token) document.getElementById('bot_token').value = data.token;
+    });
+
+fetch('/api/config/base_domain')  // we need to add this route if desired; optional
+    .then(res => res.json())
+    .then(data => {
+        if (data.domain) document.getElementById('base_domain').value = data.domain;
+    });
+
+function saveBotSettings() {
+    const token = document.getElementById('bot_token').value;
+    const username = document.getElementById('bot_username').value;
+    const enabled = document.getElementById('bot_enabled').checked;
+
+    fetch('/api/user/bot_settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({bot_token: token, bot_username: username, bot_enabled: enabled})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Settings saved. Restart the panel to apply bot changes.');
+        } else {
+            alert('❌ Error saving settings.');
+        }
+    })
+    .catch(() => alert('❌ Network error.'));
+}
+function restartPanel() {
+    if (!confirm('⚠️ Are you sure? This will restart the panel and log you out.')) return;
+    fetch('/api/admin/restart_panel', { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Restart command sent. The panel will restart shortly.');
+                setTimeout(() => window.location.href = '/login', 3000);
+            } else {
+                alert('❌ Error: ' + data.message);
+            }
+        })
+        .catch(() => alert('❌ Network error.'));
+}
+
+function copyToClipboard(btn) {
+    const input = btn.previousElementSibling;
+    input.select();
+    document.execCommand('copy');
+    btn.innerText = 'Copied!';
+    setTimeout(() => btn.innerText = 'Copy', 2000);
+}
+
+// Password match validation
+document.querySelector('form[action*="change_password"]').addEventListener('submit', function(e) {
+    var newPass = document.querySelector('input[name="new_password"]').value;
+    var confirmPass = document.querySelector('input[name="confirm_password"]').value;
+    if (newPass !== confirmPass) {
+        e.preventDefault();
+        alert('New password and confirmation do not match!');
+    }
+});
+</script>
+{% endblock %}

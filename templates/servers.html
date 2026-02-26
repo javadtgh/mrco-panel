@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Servers - X-UI Panel{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+        <h1 class="greeting">Servers</h1>
+        <p class="greeting-sub">Manage your X-UI servers</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addServerModal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Add Server
+    </button>
+</div>
+
+<!-- Servers List -->
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>CPU</th>
+                    <th>Memory</th>
+                    <th>Disk</th>
+                    <th>Xray</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for server in servers %}
+                <tr>
+                    <td>{{ server.id }}</td>
+                    <td><strong>{{ server.name }}</strong></td>
+                    <td>
+                        {% if server.status %}
+                            <span class="badge badge-green">Online</span>
+                        {% else %}
+                            <span class="badge badge-red">Offline</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ server.details.cpu|default(0) }}%</td>
+                    <td>
+                        {% if server.status %}
+                            {% set mem_total = server.details.mem.total|default(1) %}
+                            {% set mem_current = server.details.mem.current|default(0) %}
+                            {% set mem_percent = (mem_current / mem_total * 100)|round(1) %}
+                            {{ mem_percent }}%
+                            <br><small>{{ (mem_current/(1024**3))|round(1) }}/{{ (mem_total/(1024**3))|round(1) }} GB</small>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if server.status %}
+                            {% set disk_total = server.details.disk.total|default(1) %}
+                            {% set disk_current = server.details.disk.current|default(0) %}
+                            {% set disk_percent = (disk_current / disk_total * 100)|round(1) %}
+                            {{ disk_percent }}%
+                            <br><small>{{ (disk_current/(1024**3))|round(1) }}/{{ (disk_total/(1024**3))|round(1) }} GB</small>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if server.status and server.details.xray.state == 'running' %}
+                            <span class="badge badge-green">Running</span>
+                        {% else %}
+                            <span class="badge badge-red">Stopped</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" onclick="editServer('{{ server.id }}')" style="padding: 0.25rem 0.5rem; margin-right: 0.25rem;">Edit</button>
+                        <button class="btn btn-secondary btn-sm" onclick="restartXray('{{ server.id }}')" style="padding: 0.25rem 0.5rem; margin-right: 0.25rem;">Restart Xray</button>
+                        <button class="btn btn-secondary btn-sm" onclick="deleteServer('{{ server.id }}')" style="padding: 0.25rem 0.5rem;">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Server Modal (ساختار مشابه قبل با کلاس‌های جدید) -->
+<div class="modal fade" id="addServerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Server</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addServerForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Server ID (unique)</label>
+                            <input type="text" name="id" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Display Name</label>
+                            <input type="text" name="name" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Host</label>
+                            <input type="text" name="host" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Port</label>
+                            <input type="number" name="port" class="form-control" value="2053" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Base Path</label>
+                            <input type="text" name="base_path" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="username" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Subscription Base URL</label>
+                            <input type="url" name="subscription_base_url" class="form-control" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addServer()">Add Server</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Server Modal (مشابه) -->
+<div class="modal fade" id="editServerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Server</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editServerForm">
+                    <input type="hidden" name="id" id="editId">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Display Name</label>
+                            <input type="text" name="name" id="editName" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Host</label>
+                            <input type="text" name="host" id="editHost" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Port</label>
+                            <input type="number" name="port" id="editPort" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Base Path</label>
+                            <input type="text" name="base_path" id="editBasePath" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="username" id="editUsername" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" id="editPassword" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Subscription Base URL</label>
+                            <input type="url" name="subscription_base_url" id="editSubUrl" class="form-control" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveEditServer()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

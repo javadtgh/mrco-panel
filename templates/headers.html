@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Headers - X-UI Panel{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+        <h1 class="greeting">Subscription Headers</h1>
+        <p class="greeting-sub">Custom headers to show at the beginning of each user's subscription output</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addHeaderModal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Add Header
+    </button>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Header Preview</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for header in headers %}
+                <tr>
+                    <td>{{ header.name }}</td>
+                    <td>{{ header.priority }}</td>
+                    <td>
+                        {% if header.enabled %}
+                            <span class="badge badge-green">Enabled</span>
+                        {% else %}
+                            <span class="badge badge-red">Disabled</span>
+                        {% endif %}
+                    </td>
+                    <td><code>{{ header.template[:50] }}...</code></td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" onclick="editHeader({{ header.id }}, '{{ header.name|tojson }}', {{ header.template|tojson }}, {{ header.priority }}, {{ 'true' if header.enabled else 'false' }})" style="padding: 0.25rem 0.5rem; margin-right: 0.25rem;">Edit</button>
+                        <form method="POST" action="{{ url_for('delete_header', header_id=header.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Are you sure?')" style="padding: 0.25rem 0.5rem;">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Header Modal -->
+<div class="modal fade" id="addHeaderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Header</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('add_header') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Header Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Priority</label>
+                        <input type="number" name="priority" class="form-control" value="0" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="enabled" id="enabled" checked>
+                            <label class="form-check-label" for="enabled">Enabled</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Header Text</label>
+                        <textarea name="template" class="form-control" rows="5" required placeholder="# USER: {email} | Used: {used:.2f} GB / Total: {total:.2f} GB"></textarea>
+                        <small class="text-secondary">
+                            Variables: <code>{email}</code>, <code>{used}</code>, <code>{total}</code>, <code>{remaining_days}</code>, <code>{expiry}</code>
+                        </small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Header Modal -->
+<div class="modal fade" id="editHeaderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Header</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="" id="editHeaderForm">
+                    <input type="hidden" name="header_id" id="edit_header_id">
+                    <div class="mb-3">
+                        <label class="form-label">Header Name</label>
+                        <input type="text" name="name" id="edit_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Priority</label>
+                        <input type="number" name="priority" id="edit_priority" class="form-control" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="enabled" id="edit_enabled">
+                            <label class="form-check-label" for="edit_enabled">Enabled</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Header Text</label>
+                        <textarea name="template" id="edit_template" class="form-control" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editHeader(id, name, template, priority, enabled) {
+    document.getElementById('edit_header_id').value = id;
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_template').value = template;
+    document.getElementById('edit_priority').value = priority;
+    document.getElementById('edit_enabled').checked = enabled;
+    
+    document.getElementById('editHeaderForm').action = `/header/edit/${id}`;
+    
+    new bootstrap.Modal(document.getElementById('editHeaderModal')).show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,114 @@
+<!-- templates/admins.html -->
+{% extends "base.html" %}
+
+{% block title %}Manage Admins - X-UI Panel{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+        <h1 class="greeting">Manage Admins</h1>
+        <p class="greeting-sub">Create and manage sub-admins</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAdminModal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px; margin-right:0.5rem;">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Add Admin
+    </button>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Created At</th>
+                    <th>Total Traffic (GB)</th>
+                    <th>Bot Enabled</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for admin in admins %}
+                <tr>
+                    <td>{{ admin.id }}</td>
+                    <td>{{ admin.username }}</td>
+                    <td>{{ admin.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ "%.2f"|format(admin.total_traffic) }} GB</td>
+                    <td>
+                        <input type="checkbox" class="bot-toggle" data-admin-id="{{ admin.id }}" {% if admin.bot_enabled %}checked{% endif %}>
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ url_for('reset_admin_traffic', admin_id=admin.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Reset traffic stats for this admin?')">
+                                Reset Traffic
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('delete_admin', admin_id=admin.id) }}" style="display:inline; margin-left:5px;">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('⚠️ Are you sure? This will delete the admin user.')">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Admin Modal -->
+<div class="modal fade" id="addAdminModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Admin</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('add_admin') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Admin</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.bot-toggle').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const adminId = this.dataset.adminId;
+        const enabled = this.checked;
+        fetch(`/api/admin/${adminId}/bot_toggle`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({enabled: enabled})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ وضعیت ربات تغییر کرد. برای اعمال تغییرات، پنل را ریستارت کنید.');
+            } else {
+                alert('❌ خطا در تغییر وضعیت.');
+                this.checked = !enabled; // revert
+            }
+        })
+        .catch(() => {
+            alert('❌ خطا در ارتباط.');
+            this.checked = !enabled;
+        });
+    });
+});
+</script>
+{% endblock %}

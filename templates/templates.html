@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Sub Templates - X-UI Panel{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+        <h1 class="greeting">Sub Templates</h1>
+        <p class="greeting-sub">Configure config format for each server inbound</p>
+    </div>
+    <div>
+        <button class="btn btn-secondary me-2" onclick="refreshAllSubs()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+            Refresh All Subs
+        </button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTemplateModal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Template
+        </button>
+    </div>
+</div>
+
+<!-- Templates Table -->
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Server</th>
+                    <th>Inbound</th>
+                    <th>Name</th>
+                    <th>Priority</th>
+                    <th>Preview</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for template in templates %}
+                <tr>
+                    <td>{{ panels[template.server_id].panel_name if panels[template.server_id] else template.server_id }}</td>
+                    <td>
+                        {% set inbound_info = get_inbound_info(template.server_id, template.inbound_id) %}
+                        {{ inbound_info.remark if inbound_info else 'Inbound ' + template.inbound_id|string }}
+                    </td>
+                    <td>{{ template.name }}</td>
+                    <td>{{ template.priority }}</td>
+                    <td><code>{{ template.template[:50] }}...</code></td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" onclick="editTemplate({{ template.id }})" style="padding: 0.25rem 0.5rem; margin-right: 0.25rem;">Edit</button>
+                        <form method="POST" action="{{ url_for('delete_template', template_id=template.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Are you sure?')" style="padding: 0.25rem 0.5rem;">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Template Modal -->
+<div class="modal fade" id="addTemplateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('add_template') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Server</label>
+                        <select name="server_id" id="server_select" class="form-control" required onchange="loadInbounds()">
+                            <option value="">Select...</option>
+                            {% for panel_id, client in panels.items() %}
+                            <option value="{{ panel_id }}">{{ client.panel_name }} ({{ panel_id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Inbound</label>
+                        <select name="inbound_id" id="inbound_select" class="form-control" required disabled>
+                            <option value="">Select server first</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Template Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Priority</label>
+                        <input type="number" name="priority" class="form-control" value="0" min="0">
+                        <small class="text-secondary">Lower number = higher priority</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Config Template</label>
+                        <textarea name="template" class="form-control" rows="5" required placeholder="e.g. vless://{uuid}@{host}:443?type=ws&..."></textarea>
+                        <small class="text-secondary">Use <code>{uuid}</code> for user's UUID and <code>{remark}</code> for remark.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Remark Template (optional)</label>
+                        <input type="text" name="remark_template" class="form-control" placeholder="e.g. 🇩🇪 {email} - {used:.1f}/{total:.1f}GB">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Template Modal -->
+<div class="modal fade" id="editTemplateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Template</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="" id="editTemplateForm">
+                    <input type="hidden" name="template_id" id="edit_template_id">
+                    <div class="mb-3">
+                        <label class="form-label">Server</label>
+                        <select name="server_id" id="edit_server_select" class="form-control" required disabled>
+                            {% for panel_id, client in panels.items() %}
+                            <option value="{{ panel_id }}">{{ client.panel_name }} ({{ panel_id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Inbound</label>
+                        <select name="inbound_id" id="edit_inbound_select" class="form-control" required disabled></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Template Name</label>
+                        <input type="text" name="name" id="edit_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Priority</label>
+                        <input type="number" name="priority" id="edit_priority" class="form-control" min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Config Template</label>
+                        <textarea name="template" id="edit_template" class="form-control" rows="5" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Remark Template</label>
+                        <input type="text" name="remark_template" id="edit_remark_template" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

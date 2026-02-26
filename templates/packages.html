@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Packages{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+        <h1 class="greeting">Manage Packages</h1>
+        <p class="greeting-sub">Create and edit your service packages</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPackageModal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px; margin-right:0.5rem;">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Add Package
+    </button>
+</div>
+
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Price (Toman)</th>
+                    <th>Traffic (GB)</th>
+                    <th>Days</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pkg in packages %}
+                <tr>
+                    <td>{{ pkg.id }}</td>
+                    <td>{{ pkg.name }}</td>
+                    <td>{{ pkg.price|int }}</td>
+                    <td>{{ pkg.traffic_gb }}</td>
+                    <td>{{ pkg.days }}</td>
+                    <td>{{ pkg.description or '' }}</td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" onclick="editPackage({{ pkg.id }}, '{{ pkg.name }}', {{ pkg.price }}, {{ pkg.traffic_gb }}, {{ pkg.days }}, '{{ pkg.description }}')" style="padding: 0.25rem 0.5rem;">Edit</button>
+                        <form method="POST" action="{{ url_for('delete_package', package_id=pkg.id) }}" style="display:inline;">
+                            <button type="submit" class="btn btn-secondary btn-sm" onclick="return confirm('Are you sure?')" style="padding: 0.25rem 0.5rem;">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Package Modal -->
+<div class="modal fade" id="addPackageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Package</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('add_package') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Package Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price (Toman)</label>
+                        <input type="number" name="price" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Traffic (GB)</label>
+                        <input type="number" step="0.1" name="traffic_gb" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Validity (Days)</label>
+                        <input type="number" name="days" class="form-control" value="30" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description (optional)</label>
+                        <textarea name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Package</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Package Modal -->
+<div class="modal fade" id="editPackageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Package</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="" id="editPackageForm">
+                    <input type="hidden" name="package_id" id="edit_package_id">
+                    <div class="mb-3">
+                        <label class="form-label">Package Name</label>
+                        <input type="text" name="name" id="edit_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price (Toman)</label>
+                        <input type="number" name="price" id="edit_price" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Traffic (GB)</label>
+                        <input type="number" step="0.1" name="traffic_gb" id="edit_traffic" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Validity (Days)</label>
+                        <input type="number" name="days" id="edit_days" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" id="edit_description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editPackage(id, name, price, traffic, days, description) {
+    document.getElementById('edit_package_id').value = id;
+    document.getElementById('edit_name').value = name;
+    document.getElementById('edit_price').value = price;
+    document.getElementById('edit_traffic').value = traffic;
+    document.getElementById('edit_days').value = days;
+    document.getElementById('edit_description').value = description;
+    document.getElementById('editPackageForm').action = `/packages/edit/${id}`;
+    new bootstrap.Modal(document.getElementById('editPackageModal')).show();
+}
+</script>
+{% endblock %}
