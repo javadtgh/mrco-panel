@@ -1,5 +1,5 @@
 # mrco-panel
-install panel:
+## install panel:
 
 1.
 ```bash
@@ -17,7 +17,7 @@ chmod +x install.sh && ./install.sh
 4.Now your panel available in: http://Your-ip:5006
 
 ----------------------------------------------------------
-Domain setup:
+## Domain setup:
 
 1.
 ```bash
@@ -28,6 +28,7 @@ sudo apt install nginx -y
 sudo nano /etc/nginx/sites-available/mrco-panel
 ```
 3.
+#Replace Your.Domain.com with your subdomain
 ```bash
 server {
     listen 2083 ssl http2;
@@ -45,7 +46,6 @@ server {
     }
 }
 ```
-
 4.
 ```bash
 sudo ln -s /etc/nginx/sites-available/mrco-panel /etc/nginx/sites-enabled/
