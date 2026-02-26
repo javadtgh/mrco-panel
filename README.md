@@ -28,7 +28,7 @@ sudo apt install nginx -y
 sudo nano /etc/nginx/sites-available/mrco-panel
 ```
 3.
-#Replace Your.Domain.com with your subdomain
+#Replace Your.Domain.com with your subdomain and replace your ssl path
 ```bash
 server {
     listen 2083 ssl http2;
