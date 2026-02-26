@@ -32,10 +32,10 @@ sudo nano /etc/nginx/sites-available/mrco-panel
 ```bash
 server {
     listen 2083 ssl http2;
-    server_name Your.Domain.com;
+    server_name Your.Domain.com;  #Replace Your.Domain.com
 
-    ssl_certificate /path/to/your/fullchain.pem;
-    ssl_certificate_key /path/to/your/privkey.pem;
+    ssl_certificate /path/to/your/fullchain.pem;      #replace your ssl path (pubkey)
+    ssl_certificate_key /path/to/your/privkey.pem;    #replace your ssl path (privkey)
 
     location / {
         proxy_pass http://127.0.0.1:5006;
